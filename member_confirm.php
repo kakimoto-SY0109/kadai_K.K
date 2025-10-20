@@ -10,6 +10,8 @@ if (!isset($_SESSION['form_data'])) {
 $form_data = $_SESSION['form_data'];
 
 if (isset($_POST['back'])) {
+    // 確認画面フラグ
+    $_SESSION['return_from_confirm'] = true;
     header('Location: member_regist.php');
     exit;
 }
