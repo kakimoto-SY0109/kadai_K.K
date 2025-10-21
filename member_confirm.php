@@ -1,13 +1,15 @@
 <?php
 session_start();
-// require_once 'config.php';
+require_once 'config.php';
 
+// 直接URLで表示
 if (!isset($_SESSION['form_data'])) {
     header('Location: member_regist.php');
     exit;
 }
 
 $form_data = $_SESSION['form_data'];
+$error_message = '';
 
 if (isset($_POST['back'])) {
     // 確認画面フラグ
@@ -17,13 +19,56 @@ if (isset($_POST['back'])) {
 }
 
 if (isset($_POST['submit'])) {
-    $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+    try {
+        $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+        $gender_value = ($form_data['gender'] === '男性') ? 1 : 2;
         
+        $sql = "INSERT INTO members (
+                    name_sei, 
+                    name_mei, 
+                    gender, 
+                    pref_name, 
+                    address, 
+                    email, 
+                    password, 
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    :name_sei, 
+                    :name_mei, 
+                    :gender, 
+                    :pref_name, 
+                    :address, 
+                    :email, 
+                    :password, 
+                    NOW(),
+                    NOW()
+                )";
+        
+        $stmt = $pdo->prepare($sql);
+        
+        $stmt->bindValue(':name_sei', $form_data['last_name'], PDO::PARAM_STR);
+        $stmt->bindValue(':name_mei', $form_data['first_name'], PDO::PARAM_STR);
+        $stmt->bindValue(':gender', $gender_value, PDO::PARAM_INT);
+        $stmt->bindValue(':pref_name', $form_data['prefecture'], PDO::PARAM_STR);
+        $stmt->bindValue(':address', $form_data['address'], PDO::PARAM_STR);
+        $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+        $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
+        $stmt->execute();
+    
     unset($_SESSION['form_data']);
-
-    // 完了画面への遷移
+    
+    // 完了画面へ遷移
     header('Location: member_complete.php');
-    exit;   
+    exit;
+    
+} catch (PDOException $e) {
+    if ($e->getCode() == 23000) {
+        $error_message = 'このメールアドレスは既に登録されています。';
+    } else {
+        $error_message = 'データベースエラーが発生しました: ' . $e->getMessage();
+    }
+}
 }
 ?>
 <!DOCTYPE html>

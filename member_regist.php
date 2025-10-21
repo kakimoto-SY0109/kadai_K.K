@@ -1,7 +1,7 @@
 <?php
 session_start();
 // db接続
-// require_once 'config.php';
+require_once 'config.php';
 
 $errors = [];
 $form_data = [
