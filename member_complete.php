@@ -68,7 +68,7 @@ require_once 'config.php';
             登録いただいたメールアドレスとパスワードでログインできます。
         </div>
         <div class="button-group">
-            <a href="member_regist.php">トップページへ戻る</a>
+            <a href="top.php">トップに戻る</a>
         </div>
     </div>
 </body>

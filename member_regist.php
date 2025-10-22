@@ -84,6 +84,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'メールアドレスは200文字以内で入力してください。';
     } elseif (!filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'メールアドレスの形式が正しくありません。';
+    } else {
+        try {
+            $sql = "SELECT COUNT(*) FROM members WHERE email = :email";
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+            $stmt->execute();
+            $count = $stmt->fetchColumn();
+        
+            if ($count > 0) {
+                $errors[] = 'このメールアドレスは既に登録されています。';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'データベースエラーが発生しました。';
+            error_log('Email check error: ' . $e->getMessage());
+        }
     }
 
     if (empty($form_data['password'])) {
@@ -210,6 +225,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button:hover {
             background-color: #45a049;
         }
+                .link-group {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .link-group a {
+            color: #4CAF50;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .link-group a:hover {
+            text-decoration: underline;
+        }
+        .separator {
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -299,6 +329,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="button-group">
                 <button type="submit">確認画面へ</button>
             </div>
+
+            <div class="link-group">
+                <a href="top.php">トップに戻る</a>
+                <div class="separator">|</div>
+                <a href="login.php">ログインはこちら</a>
+        </div>
         </form>
     </div>
 </body>

@@ -56,19 +56,16 @@ if (isset($_POST['submit'])) {
         $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
         $stmt->execute();
     
-    unset($_SESSION['form_data']);
-    
-    // 完了画面へ遷移
-    header('Location: member_complete.php');
-    exit;
-    
-} catch (PDOException $e) {
-    if ($e->getCode() == 23000) {
-        $error_message = 'このメールアドレスは既に登録されています。';
-    } else {
-        $error_message = 'データベースエラーが発生しました: ' . $e->getMessage();
+        unset($_SESSION['form_data']);
+        
+        // 完了画面へ遷移
+        header('Location: member_complete.php');
+        exit;
+        
+        } catch (PDOException $e) {
+            error_log('Database error: ' . $e->getMessage());
+            die('データベースエラーが発生しました。');
     }
-}
 }
 ?>
 <!DOCTYPE html>
@@ -163,6 +160,13 @@ if (isset($_POST['submit'])) {
 <body>
     <div class="container">
         <h1>会員登録確認</h1>
+        
+        <?php if (!empty($error_message)): ?>
+            <div class="error-message">
+                <?php echo htmlspecialchars($error_message, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+        <?php endif; ?>
+        
         <p style="margin-bottom: 20px; color: #666;">以下の内容で登録します。よろしければ「登録する」ボタンを押してください。</p>
 
         <div class="confirm-section">
