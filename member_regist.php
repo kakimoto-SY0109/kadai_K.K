@@ -85,19 +85,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'メールアドレスの形式が正しくありません。';
     } else {
-        try {
-            $sql = "SELECT COUNT(*) FROM members WHERE email = :email";
-            $stmt = $pdo->prepare($sql);
-            $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
-            $stmt->execute();
-            $count = $stmt->fetchColumn();
-        
-            if ($count > 0) {
-                $errors[] = 'このメールアドレスは既に登録されています。';
-            }
-        } catch (PDOException $e) {
-            $errors[] = 'データベースエラーが発生しました。';
-            error_log('Email check error: ' . $e->getMessage());
+        $sql = "SELECT COUNT(*) FROM members WHERE email = :email";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+        $stmt->execute();
+        $count = $stmt->fetchColumn();
+
+        if ($count > 0) {
+            $errors[] = 'このメールアドレスは既に登録されています。';
         }
     }
 
