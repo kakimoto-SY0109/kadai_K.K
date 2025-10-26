@@ -14,6 +14,19 @@ if ($login_flg) {
         $member_name = $member['name_sei'] . ' ' . $member['name_mei'];
     }
 }
+
+$success_message = '';
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    // 表示後は削除
+    unset($_SESSION['success_message']);
+}
+
+$error_message = '';
+if (isset($_SESSION['error_message'])) {
+    $error_message = $_SESSION['error_message'];
+    unset($_SESSION['error_message']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -96,6 +109,46 @@ if ($login_flg) {
             color: #666;
             line-height: 1.8;
         }
+        .page-message {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 32px;
+            width: 100%;
+            max-width: 360px;
+            border-radius: 10px;
+            text-align: center;
+            padding: 12px 16px;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            z-index: 9999;
+            opacity: 1;
+            background-clip: padding-box;
+            box-sizing: border-box;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        .page-message.hidden {
+            opacity: 0;
+            transform: translateX(-50%) translateY(12px);
+            pointer-events: none;
+        }
+        .success-message {
+            background-color: #dff0d8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #b71c1c;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 480px) {
+            .page-message { max-width: 90%; bottom: 20px; padding: 10px 12px; font-size: 14px; }
+            .container { margin: 30px 16px; }
+            .btn { padding: 10px 18px; font-size: 14px; }
+        }
     </style>
 </head>
 <body>
@@ -109,6 +162,7 @@ if ($login_flg) {
             </div>
             <div class="header-right">
                 <?php if ($login_flg): ?>
+                    <a href="thread_regist.php?clear=1" class="btn">新規スレッド作成</a>
                     <a href="logout.php" class="btn btn-logout">ログアウト</a>
                 <?php else: ?>
                     <a href="login.php" class="btn">ログイン</a>
@@ -131,5 +185,43 @@ if ($login_flg) {
             </p>
         </div>
     </div>
+
+    <?php if (!empty($success_message) || !empty($error_message)): ?>
+        <?php if (!empty($success_message)): ?>
+            <div class="page-message success-message" id="pageMessage"><?php echo htmlspecialchars($success_message, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php else: ?>
+            <div class="page-message error-message" id="pageMessage"><?php echo htmlspecialchars($error_message, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <script>
+        (function() {
+            var msg = document.getElementById('pageMessage');
+            if (!msg) return;
+
+            // 表示継続時間（setTimeoutはミリ秒で指定する）
+            var displayDuration = 10000;
+            // 指定時間後非表示
+            setTimeout(function() {
+                msg.classList.add('hidden');
+                setTimeout(function() {
+                    if (msg && msg.parentNode) {
+                        msg.parentNode.removeChild(msg);
+                    }
+                // フェード開始後、完了まで0.7秒
+                }, 700);
+            }, displayDuration);
+
+            // ユーザーがスレッド作成成功メッセージをクリックしたら閉じる
+            msg.addEventListener('click', function() {
+                msg.classList.add('hidden');
+                setTimeout(function() {
+                    if (msg && msg.parentNode) {
+                        msg.parentNode.removeChild(msg);
+                    }
+                }, 700);
+            });
+        })();
+    </script>
 </body>
 </html>
