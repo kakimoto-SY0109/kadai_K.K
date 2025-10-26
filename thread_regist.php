@@ -181,7 +181,7 @@ if (isset($_POST['back']) && isset($_SESSION['form_data'])) {
                 
                 <div class="button-group">
                     <button type="submit" class="btn">確認画面へ</button>
-                    <a href="top.php" class="btn btn-secondary">トップに戻る</a>
+                    <a href="top.php" class="btn btn-secondary">一覧に戻る</a>
                 </div>
             </form>
         </div>

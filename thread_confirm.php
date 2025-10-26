@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'])) {
 
             $_SESSION['success_message'] = 'スレッドを作成しました✓';
             
-            header('Location: top.php');
+            header('Location: thread_list.php');
             exit;
             
         } catch (PDOException $e) {
@@ -181,29 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'])) {
                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="button-group">
                     <button type="submit" class="btn" id="submitBtn">スレッドを作成する</button>
-                    <button type="button" class="btn btn-secondary" onclick="goBack()">前に戻る</button>
+                    <button type="submit" class="btn btn-secondary" name="back" value="1" formaction="thread_regist.php" formmethod="post">前に戻る</button>
                 </div>
             </form>
         </div>
     </div>
     
     <script>
-        function goBack() {
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'thread_regist.php';
-            
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'back';
-            input.value = '1';
-            
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-        }
-        
-        // 二重送信防止
         document.getElementById('submitForm').addEventListener('submit', function(e) {
             var btn = document.getElementById('submitBtn');
             if (btn.disabled) {
