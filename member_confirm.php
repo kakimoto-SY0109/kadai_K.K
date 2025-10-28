@@ -11,6 +11,14 @@ if (!isset($_SESSION['form_data'])) {
 $form_data = $_SESSION['form_data'];
 $error_message = '';
 
+$posted = $_POST['csrf_token'] ?? '';
+if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$posted)) {
+    $_SESSION['error_message'] = '不正なリクエストです。もう一度やり直してください。';
+    header('Location: member_regist.php');
+    exit;
+}
+$csrf = $_SESSION['csrf_token'];
+
 if (isset($_POST['back'])) {
     // 確認画面フラグ
     $_SESSION['return_from_confirm'] = true;

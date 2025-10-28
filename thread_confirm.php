@@ -12,11 +12,25 @@ if (!isset($_SESSION['form_data'])) {
     exit;
 }
 
+// CSRF トークン生成
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $thread_title = $_SESSION['form_data']['thread_title'];
 $comment = $_SESSION['form_data']['comment'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_SESSION['form_data'])) {
+        header('Location: thread_regist.php');
+        exit;
+    }
+
+    // CSRF トークン検証
+    $posted_token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+    if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$posted_token)) {
+        // トークン不一致
+        $_SESSION['error_message'] = '不正なリクエストです。もう一度やり直してください。';
         header('Location: thread_regist.php');
         exit;
     }
@@ -33,6 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             VALUES (?, ?, ?, NOW(), NOW())"
         );
         $sql->execute([$member_id, $form['thread_title'], $form['comment']]);
+
+        // CSRF トークンを使い切る（再利用不可にする）
+        unset($_SESSION['csrf_token']);
 
         $_SESSION['success_message'] = 'スレッドを作成しました✓';
 
@@ -178,6 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <form action="thread_confirm.php" method="post" id="submitForm">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="button-group">
                     <button type="submit" class="btn" id="submitBtn">スレッドを作成する</button>
                     <button type="submit" class="btn-secondary" name="back" value="1" formaction="thread_regist.php" formmethod="post">前に戻る</button>

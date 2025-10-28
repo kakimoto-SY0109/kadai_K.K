@@ -1,5 +1,13 @@
 <?php
 require_once 'config.php';
+
+$posted = $_POST['csrf_token'] ?? '';
+if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$posted)) {
+    $_SESSION['error_message'] = '不正なリクエストです。もう一度やり直してください。';
+    header('Location: member_regist.php');
+    exit;
+}
+unset($_SESSION['csrf_token']);
 ?>
 <!DOCTYPE html>
 <html lang="ja">
