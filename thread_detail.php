@@ -1,7 +1,6 @@
 <?php
 require_once 'config.php';
 
-// ログイン判定
 $login_flg = isset($_SESSION['member_id']);
 $member_id = $login_flg ? $_SESSION['member_id'] : null;
 
@@ -13,11 +12,17 @@ if (isset($_GET['id']) && ctype_digit((string)$_GET['id'])) {
     exit;
 }
 
+$page = 1;
+if (isset($_GET['page']) && ctype_digit((string)$_GET['page']) && (int)$_GET['page'] >= 1) {
+    $page = (int)$_GET['page'];
+}
+
 $thread = null;
 $comments = [];
 $error_message = '';
 $success_message = '';
 
+$perPage = 5;
 
 if (isset($_SESSION['success_message'])) {
     $success_message = $_SESSION['success_message'];
@@ -46,7 +51,22 @@ try {
         exit;
     }
 
+    // コメント総数取得
+    $countStmt = $pdo->prepare("
+        SELECT COUNT(*) AS cnt
+        FROM comments
+        WHERE thread_id = ? AND deleted_at IS NULL
+    ");
+    $countStmt->execute([$thread_id]);
+    $countRow = $countStmt->fetch(PDO::FETCH_ASSOC);
+    $totalComments = (int)($countRow['cnt'] ?? 0);
+
+    // ページ数
+    $totalPages = (int)max(1, ceil($totalComments / $perPage));
+    if ($page > $totalPages) $page = $totalPages;
+
     // コメント一覧取得
+    $offset = ($page - 1) * $perPage;
     $cstmt = $pdo->prepare("
         SELECT c.id, c.thread_id, c.member_id, c.comment, c.created_at,
                m.name_sei, m.name_mei
@@ -54,8 +74,13 @@ try {
         LEFT JOIN members m ON c.member_id = m.id
         WHERE c.thread_id = ? AND c.deleted_at IS NULL
         ORDER BY c.created_at ASC
+        LIMIT ? OFFSET ?
     ");
-    $cstmt->execute([$thread_id]);
+    
+    $cstmt->bindValue(1, $thread_id, PDO::PARAM_INT);
+    $cstmt->bindValue(2, $perPage, PDO::PARAM_INT);
+    $cstmt->bindValue(3, $offset, PDO::PARAM_INT);
+    $cstmt->execute();
     $comments = $cstmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log('Thread detail DB error: ' . $e->getMessage());
@@ -197,6 +222,31 @@ try {
             color: #777;
             text-decoration: none;
         }
+        .pager {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .pager a, .pager span {
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            color: #444;
+            border: 1px solid #ddd;
+            background: #fff;
+        }
+        .pager a:hover {
+            background: #f0f0f0;
+        }
+        .pager .disabled {
+            color: #aaa;
+            border-color: #eee;
+            background: #f9f9f9;
+            pointer-events: none;
+            cursor: default;
+        }
         @media (max-width: 600px) {
             .container {
                 margin: 24px 16px;
@@ -243,7 +293,7 @@ try {
 
             <hr>
 
-            <h3>コメント一覧（<?php echo count($comments); ?>件）</h3>
+            <h3>コメント一覧（<?php echo $totalComments; ?>件）</h3>
             <div class="comments">
                 <?php if (empty($comments)): ?>
                     <div class="empty" style="padding:12px;color:#666">まだコメントはありません。</div>
@@ -260,12 +310,28 @@ try {
                 <?php endif; ?>
             </div>
 
+            <div class="pager" aria-label="コメントページネーション">
+                <?php if ($page > 1): ?>
+                    <a href="thread_detail.php?id=<?php echo $thread_id; ?>&page=<?php echo $page - 1; ?>">前へ</a>
+                <?php else: ?>
+                    <span class="disabled">前へ</span>
+                <?php endif; ?>
+
+                <span>ページ <?php echo $page; ?> / <?php echo $totalPages; ?></span>
+
+                <?php if ($page < $totalPages): ?>
+                    <a href="thread_detail.php?id=<?php echo $thread_id; ?>&page=<?php echo $page + 1; ?>">次へ</a>
+                <?php else: ?>
+                    <span class="disabled">次へ</span>
+                <?php endif; ?>
+            </div>
+
             <?php if ($login_flg): ?>
                 <div class="form-area">
                     <h4>コメントを投稿する</h4>
                     <form method="post" action="comment_post.php">
                         <input type="hidden" name="thread_id" value="<?php echo (int)$thread_id; ?>">
-                        <textarea name="comment" placeholder="コメントを入力してください" required></textarea>
+                        <textarea name="comment" placeholder="コメントを入力してください"></textarea>
                         <div class="input-row">
                             <button type="submit" class="submit">投稿する</button>
                         </div>
