@@ -244,7 +244,11 @@ try {
                         <?php foreach ($threads as $t): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($t['id'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars($t['title'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td>
+                                    <a href="thread_detail.php?id=<?php echo (int)$t['id']; ?>">
+                                        <?php echo htmlspecialchars($t['title'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </a>
+                                </td>
                                 <td><?php echo htmlspecialchars($t['created_at'], ENT_QUOTES, 'UTF-8'); ?></td>
                             </tr>
                         <?php endforeach; ?>
