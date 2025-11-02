@@ -69,17 +69,20 @@ try {
     $offset = ($page - 1) * $perPage;
     $cstmt = $pdo->prepare("
         SELECT c.id, c.thread_id, c.member_id, c.comment, c.created_at,
-               m.name_sei, m.name_mei
+               m.name_sei, m.name_mei,
+               (SELECT COUNT(*) FROM likes WHERE comment_id = c.id) AS like_count,
+               (SELECT COUNT(*) FROM likes WHERE comment_id = c.id AND member_id = ?) AS user_liked
         FROM comments c
         LEFT JOIN members m ON c.member_id = m.id
         WHERE c.thread_id = ? AND c.deleted_at IS NULL
         ORDER BY c.created_at ASC
         LIMIT ? OFFSET ?
     ");
-    
-    $cstmt->bindValue(1, $thread_id, PDO::PARAM_INT);
-    $cstmt->bindValue(2, $perPage, PDO::PARAM_INT);
-    $cstmt->bindValue(3, $offset, PDO::PARAM_INT);
+
+    $cstmt->bindValue(1, ($member_id ?? 0), PDO::PARAM_INT);
+    $cstmt->bindValue(2, $thread_id, PDO::PARAM_INT);
+    $cstmt->bindValue(3, $perPage, PDO::PARAM_INT);
+    $cstmt->bindValue(4, $offset, PDO::PARAM_INT);
     $cstmt->execute();
     $comments = $cstmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -256,6 +259,28 @@ try {
                 font-size: 13px;
             }
         }
+
+        .like-btn {
+            display: inline-block;
+            background: #e0e0e0;
+            color: #666;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        .like-btn:hover {
+            background: #d0d0d0;
+        }
+        .like-btn.liked {
+            background: #ff5252;
+            color: #fff;
+        }
+        .like-btn.liked:hover {
+            background: #e04848;
+        }
     </style>
 </head>
 <body>
@@ -302,9 +327,24 @@ try {
                         <div class="comment">
                             <div class="meta">
                                 <?php echo htmlspecialchars(($c['name_sei'] ?? '') . ' ' . ($c['name_mei'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-                               　|　<?php echo htmlspecialchars($c['created_at'], ENT_QUOTES, 'UTF-8'); ?>
+                                　|　<?php echo htmlspecialchars($c['created_at'], ENT_QUOTES, 'UTF-8'); ?>
                             </div>
                             <div class="content"><?php echo htmlspecialchars($c['comment'], ENT_QUOTES, 'UTF-8'); ?></div>
+        
+                            <?php if ($login_flg): ?>
+                                <form method="post" action="thread_like.php" style="display:inline">
+                                    <input type="hidden" name="comment_id" value="<?php echo (int)$c['id']; ?>">
+                                    <input type="hidden" name="thread_id" value="<?php echo (int)$thread_id; ?>">
+                                    <input type="hidden" name="page" value="<?php echo (int)$page; ?>">
+                                    <button type="submit" class="like-btn <?php echo $c['user_liked'] > 0 ? 'liked' : ''; ?>">
+                                        ♥ <?php echo (int)$c['like_count']; ?>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <a href="member_regist.php" class="like-btn" style="text-decoration:none">
+                                    ♥ <?php echo (int)$c['like_count']; ?>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
