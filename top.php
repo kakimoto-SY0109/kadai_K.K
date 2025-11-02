@@ -30,6 +30,9 @@ if ($login_flg) {
         body {
             font-family: sans-serif;
             background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         header {
             background-color: #00897B;
@@ -76,10 +79,23 @@ if ($login_flg) {
         .btn-logout:hover {
             background-color: #ff1744;
         }
+
+        .btn-delete {
+            background-color: #9E9E9E;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: #757575;
+        }
         .container {
             max-width: 1200px;
-            margin: 50px auto;
+            width: 100%;
+            margin: 50px auto auto auto;
+
             padding: 20px;
+            box-sizing: border-box;
+            flex: 1;
         }
         .content {
             background-color: white;
@@ -87,6 +103,8 @@ if ($login_flg) {
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             text-align: center;
+            width: 100%;
+            box-sizing: border-box;
         }
         .content h2 {
             color: #333;
@@ -96,9 +114,30 @@ if ($login_flg) {
             color: #666;
             line-height: 1.8;
         }
+
+        .delete-section {
+            background-color: #00897B;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: auto;
+            text-align: right;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 72px;
+        }
+        .delete-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
         @media (max-width: 480px) {
-            .container { margin: 30px 16px; }
-            .btn { padding: 10px 18px; font-size: 14px; }
+            .container { 
+                margin: 30px 16px auto 16px;
+                width: calc(100% - 32px);
+            }
+            .btn {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -137,5 +176,14 @@ if ($login_flg) {
             </p>
         </div>
     </div>
+
+    <div class="delete-section">
+            <div class="delete-container">
+                <?php if ($login_flg): ?>
+                    <a href="member_leave.php" class="btn btn-delete">退会</a>
+                <?php endif; ?>
+            </div>
+    </div>
+    
 </body>
 </html>

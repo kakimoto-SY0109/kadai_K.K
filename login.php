@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error_message = 'IDもしくはパスワードを入力してください';
     } else {
-        $sql = $pdo->prepare("SELECT id, password, name_sei, name_mei FROM members WHERE email = ?");
+        $sql = $pdo->prepare("SELECT id, password, name_sei, name_mei FROM members WHERE email = ? AND deleted_at IS NULL");
         $sql->execute([$email]);
         $member = $sql->fetch();
             
