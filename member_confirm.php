@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'config.php';
 
 // 直接URLで表示
@@ -11,70 +10,73 @@ if (!isset($_SESSION['form_data'])) {
 $form_data = $_SESSION['form_data'];
 $error_message = '';
 
-$posted = $_POST['csrf_token'] ?? '';
-if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$posted)) {
-    $_SESSION['error_message'] = '不正なリクエストです。もう一度やり直してください。';
-    header('Location: member_regist.php');
-    exit;
-}
-$csrf = $_SESSION['csrf_token'];
-
-if (isset($_POST['back'])) {
-    // 確認画面フラグ
-    $_SESSION['return_from_confirm'] = true;
-    header('Location: member_regist.php');
-    exit;
-}
-
-if (isset($_POST['submit'])) {
-    try {
-        $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
-        $gender_value = ($form_data['gender'] === '男性') ? 1 : 2;
-        
-        $sql = "INSERT INTO members (
-                    name_sei, 
-                    name_mei, 
-                    gender, 
-                    pref_name, 
-                    address, 
-                    email, 
-                    password, 
-                    created_at,
-                    updated_at
-                ) VALUES (
-                    :name_sei, 
-                    :name_mei, 
-                    :gender, 
-                    :pref_name, 
-                    :address, 
-                    :email, 
-                    :password, 
-                    NOW(),
-                    NOW()
-                )";
-        
-        $stmt = $pdo->prepare($sql);
-        
-        $stmt->bindValue(':name_sei', $form_data['last_name'], PDO::PARAM_STR);
-        $stmt->bindValue(':name_mei', $form_data['first_name'], PDO::PARAM_STR);
-        $stmt->bindValue(':gender', $gender_value, PDO::PARAM_INT);
-        $stmt->bindValue(':pref_name', $form_data['prefecture'], PDO::PARAM_STR);
-        $stmt->bindValue(':address', $form_data['address'], PDO::PARAM_STR);
-        $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
-        $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
-        $stmt->execute();
-    
-        unset($_SESSION['form_data']);
-        
-        // 完了画面へ遷移
-        header('Location: member_complete.php');
+// POST時のみCSRFトークンを検証
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $posted = $_POST['csrf_token'] ?? '';
+    if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$posted)) {
+        $_SESSION['error_message'] = '不正なリクエストです。もう一度やり直してください。';
+        header('Location: member_regist.php');
         exit;
+    }
+
+    if (isset($_POST['back'])) {
+        // 確認画面フラグ
+        $_SESSION['return_from_confirm'] = true;
+        header('Location: member_regist.php');
+        exit;
+    }
+
+    if (isset($_POST['submit'])) {
+        try {
+            $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+            $gender_value = ($form_data['gender'] === '男性') ? 1 : 2;
+            
+            $sql = "INSERT INTO members (
+                        name_sei, 
+                        name_mei, 
+                        gender, 
+                        pref_name, 
+                        address, 
+                        email, 
+                        password, 
+                        created_at,
+                        updated_at
+                    ) VALUES (
+                        :name_sei, 
+                        :name_mei, 
+                        :gender, 
+                        :pref_name, 
+                        :address, 
+                        :email, 
+                        :password, 
+                        NOW(),
+                        NOW()
+                    )";
+            
+            $stmt = $pdo->prepare($sql);
+            
+            $stmt->bindValue(':name_sei', $form_data['last_name'], PDO::PARAM_STR);
+            $stmt->bindValue(':name_mei', $form_data['first_name'], PDO::PARAM_STR);
+            $stmt->bindValue(':gender', $gender_value, PDO::PARAM_INT);
+            $stmt->bindValue(':pref_name', $form_data['prefecture'], PDO::PARAM_STR);
+            $stmt->bindValue(':address', $form_data['address'], PDO::PARAM_STR);
+            $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+            $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
+            $stmt->execute();
         
-        } catch (PDOException $e) {
-            error_log('Database error: ' . $e->getMessage());
-            die('データベースエラーが発生しました。');
+            unset($_SESSION['form_data']);
+            
+            // 完了画面へ遷移
+            header('Location: member_complete.php');
+            exit;
+            
+            } catch (PDOException $e) {
+                error_log('Database error: ' . $e->getMessage());
+                die('データベースエラーが発生しました。');
+        }
     }
 }
+$csrf = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -213,6 +215,7 @@ if (isset($_POST['submit'])) {
         </div>
 
         <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="button-group">
                 <button type="submit" name="back" class="btn-back">戻る</button>
                 <button type="submit" name="submit" class="btn-submit">登録する</button>
