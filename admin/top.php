@@ -66,6 +66,13 @@ $admin_name = $_SESSION['admin_name'] ?? '';
         .btn:hover {
             background-color: #616161;
         }
+        .btn-member {
+            background-color: #616161;
+            color: white;
+        }
+        .btn-member:hover {
+            background-color: #424242;
+        }
         .btn-logout {
             background-color: #ff5252;
             color: white;
@@ -122,6 +129,7 @@ $admin_name = $_SESSION['admin_name'] ?? '';
                 <div class="welcome-message">ようこそ <?php echo htmlspecialchars($admin_name, ENT_QUOTES, 'UTF-8'); ?> 様</div>
             </div>
             <div class="header-right">
+                <a href="member.php" class="btn btn-member">会員一覧</a>
                 <a href="logout.php" class="btn btn-logout">ログアウト</a>
             </div>
         </div>
