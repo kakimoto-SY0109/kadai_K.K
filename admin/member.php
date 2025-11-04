@@ -277,6 +277,21 @@ $current_params = [
         .btn-search:hover {
             background-color: #1976D2;
         }
+        .btn-add {
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            align-self: center;
+            margin-top: 10px;
+        }
+        .btn-add:hover {
+            background-color: #1976D2;
+        }
         
         .btn-edit {
             display: inline-block;
