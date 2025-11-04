@@ -82,6 +82,8 @@ try {
         $params[':keyword2'] = "%{$search_keyword}%";
     }
     
+    // 退会済みユーザー除く
+    $where[] = "deleted_at IS NULL";
     $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
     
     $allowed_sort = ['id', 'created_at'];
@@ -275,6 +277,21 @@ $current_params = [
         .btn-search:hover {
             background-color: #1976D2;
         }
+        
+        .btn-edit {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 6px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .btn-edit:hover {
+            background-color: #45a049
+        }
+
         .result-box {
             background-color: white;
             padding: 30px;
@@ -456,6 +473,7 @@ $current_params = [
             <div class="result-header">
                 <h2>会員一覧</h2>
                 <div class="result-count">全 <?php echo number_format($total_count); ?> 件</div>
+                <a href="member_regist.php" class="btn-add">新規会員登録</a>
             </div>
 
             <?php if (isset($error_message)): ?>
@@ -489,6 +507,7 @@ $current_params = [
                                     echo buildUrl($params);
                                 ?>'">▼</button>
                             </th>
+                            <th>編集</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -499,6 +518,7 @@ $current_params = [
                                 <td><?php echo htmlspecialchars(getGenderText($member['gender']), ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo htmlspecialchars($member['pref_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo htmlspecialchars($member['created_at'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><a href="member_edit.php?id=<?php echo urlencode($member['id']); ?>" class="btn-edit">編集</a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
