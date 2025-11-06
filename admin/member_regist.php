@@ -32,21 +32,57 @@ $prefectures = [
     '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
 ];
 
+$edit_mode = false;
+$edit_id = $_GET['id'] ?? '';
+
+if (!empty($edit_id) && is_numeric($edit_id)) {
+    $edit_mode = true;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_SESSION['return_from_confirm']) && $_SESSION['return_from_confirm'] === true) {
         $form_data = $_SESSION['form_data'];
         $form_data['password'] = '';
         $form_data['password_confirm'] = '';
+        $edit_mode = $_SESSION['edit_mode'] ?? false;
         unset($_SESSION['return_from_confirm']);
     } else {
         unset($_SESSION['form_data']);
-        // 新規登録の場合
-        $form_data['member_id'] = '登録後に自動採番';
+        
+        if ($edit_mode) {
+            try {
+                $sql = "SELECT * FROM members WHERE id = :id AND deleted_at IS NULL";
+                $stmt = $pdo->prepare($sql);
+                $stmt->bindValue(':id', $edit_id, PDO::PARAM_INT);
+                $stmt->execute();
+                $member = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$member) {
+                    header('Location: member.php');
+                    exit;
+                }
+                
+                $form_data['member_id'] = $member['id'];
+                $form_data['last_name'] = $member['name_sei'];
+                $form_data['first_name'] = $member['name_mei'];
+                $form_data['gender'] = ($member['gender'] == 1) ? '男性' : '女性';
+                $form_data['prefecture'] = $member['pref_name'];
+                $form_data['address'] = $member['address'];
+                $form_data['email'] = $member['email'];
+                
+                $_SESSION['edit_member_id'] = $member['id'];
+                
+            } catch (PDOException $e) {
+                $errors[] = 'データの取得に失敗しました。';
+            }
+        } else {
+            $form_data['member_id'] = '登録後に自動採番';
+        }
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $form_data['member_id'] = '登録後に自動採番';
+    $form_data['member_id'] = trim($_POST['member_id'] ?? '');
     $form_data['last_name'] = trim($_POST['last_name'] ?? '');
     $form_data['first_name'] = trim($_POST['first_name'] ?? '');
     $form_data['gender'] = $_POST['gender'] ?? '';
@@ -56,7 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form_data['password'] = $_POST['password'] ?? '';
     $form_data['password_confirm'] = $_POST['password_confirm'] ?? '';
 
+    if ($form_data['member_id'] !== '登録後に自動採番' && is_numeric($form_data['member_id'])) {
+        $edit_mode = true;
+    }
+
     // バリデーション
+    if ($edit_mode && (empty($form_data['member_id']) || !is_numeric($form_data['member_id']))) {
+        $errors[] = '会員IDが取得できませんでした。';
+    }
+
     if (empty($form_data['last_name'])) {
         $errors[] = '氏名（姓）を入力してください。';
     } elseif (mb_strlen($form_data['last_name']) > 20) {
@@ -92,37 +136,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($form_data['email'], FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'メールアドレスの形式が正しくありません。';
     } else {
-        $sql = "SELECT COUNT(*) FROM members WHERE email = :email";
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
-        $stmt->execute();
-        $count = $stmt->fetchColumn();
+        if ($edit_mode) {
+            $sql = "SELECT COUNT(*) FROM members WHERE email = :email AND id != :id AND deleted_at IS NULL";
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+            $stmt->bindValue(':id', $form_data['member_id'], PDO::PARAM_INT);
+            $stmt->execute();
+            $count = $stmt->fetchColumn();
+        } else {
+            $sql = "SELECT COUNT(*) FROM members WHERE email = :email";
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+            $stmt->execute();
+            $count = $stmt->fetchColumn();
+        }
 
         if ($count > 0) {
             $errors[] = 'このメールアドレスは既に登録されています。';
         }
     }
 
-    if (empty($form_data['password'])) {
-        $errors[] = 'パスワードを入力してください。';
-    } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $form_data['password'])) {
-        $errors[] = 'パスワードは半角英数字で入力してください。';
-    } elseif (mb_strlen($form_data['password']) < 8 || mb_strlen($form_data['password']) > 20) {
-        $errors[] = 'パスワードは8文字以上20文字以内で入力してください。';
-    }
+    $password_changed = !empty($form_data['password']) || !empty($form_data['password_confirm']);
+    
+    if ($edit_mode) {
+        if ($password_changed) {
+            if (empty($form_data['password'])) {
+                $errors[] = 'パスワードを入力してください。';
+            } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $form_data['password'])) {
+                $errors[] = 'パスワードは半角英数字で入力してください。';
+            } elseif (mb_strlen($form_data['password']) < 8 || mb_strlen($form_data['password']) > 20) {
+                $errors[] = 'パスワードは8文字以上20文字以内で入力してください。';
+            }
 
-    if (empty($form_data['password_confirm'])) {
-        $errors[] = 'パスワード確認を入力してください。';
-    } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $form_data['password_confirm'])) {
-        $errors[] = 'パスワード確認は半角英数字で入力してください。';
-    } elseif (mb_strlen($form_data['password_confirm']) < 8 || mb_strlen($form_data['password_confirm']) > 20) {
-        $errors[] = 'パスワード確認は8文字以上20文字以内で入力してください。';
-    } elseif ($form_data['password'] !== $form_data['password_confirm']) {
-        $errors[] = 'パスワードとパスワード確認が一致しません。';
+            if (empty($form_data['password_confirm'])) {
+                $errors[] = 'パスワード確認を入力してください。';
+            } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $form_data['password_confirm'])) {
+                $errors[] = 'パスワード確認は半角英数字で入力してください。';
+            } elseif (mb_strlen($form_data['password_confirm']) < 8 || mb_strlen($form_data['password_confirm']) > 20) {
+                $errors[] = 'パスワード確認は8文字以上20文字以内で入力してください。';
+            } elseif ($form_data['password'] !== $form_data['password_confirm']) {
+                $errors[] = 'パスワードとパスワード確認が一致しません。';
+            }
+        }
+    } else {
+        if (empty($form_data['password'])) {
+            $errors[] = 'パスワードを入力してください。';
+        } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $form_data['password'])) {
+            $errors[] = 'パスワードは半角英数字で入力してください。';
+        } elseif (mb_strlen($form_data['password']) < 8 || mb_strlen($form_data['password']) > 20) {
+            $errors[] = 'パスワードは8文字以上20文字以内で入力してください。';
+        }
+
+        if (empty($form_data['password_confirm'])) {
+            $errors[] = 'パスワード確認を入力してください。';
+        } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $form_data['password_confirm'])) {
+            $errors[] = 'パスワード確認は半角英数字で入力してください。';
+        } elseif (mb_strlen($form_data['password_confirm']) < 8 || mb_strlen($form_data['password_confirm']) > 20) {
+            $errors[] = 'パスワード確認は8文字以上20文字以内で入力してください。';
+        } elseif ($form_data['password'] !== $form_data['password_confirm']) {
+            $errors[] = 'パスワードとパスワード確認が一致しません。';
+        }
     }
 
     if (empty($errors)) {
         $_SESSION['form_data'] = $form_data;
+        $_SESSION['edit_mode'] = $edit_mode;
+        if ($edit_mode) {
+            $_SESSION['password_changed'] = $password_changed;
+        }
         header('Location: member_confirm.php');
         exit;
     } else {
@@ -134,13 +215,20 @@ if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 $csrf = $_SESSION['csrf_token'];
+
+// 表示用
+$page_title = $edit_mode ? '会員編集' : '会員登録';
+$page_icon = $edit_mode ? '✏️' : '🔐';
+$form_title = $edit_mode ? '会員編集フォーム' : '会員登録フォーム';
+$password_placeholder = $edit_mode ? '変更しない場合は空欄' : '';
+$password_label_suffix = $edit_mode ? '（変更する場合のみ入力）' : '';
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>会員登録</title>
+    <title><?php echo $page_title; ?></title>
     <style>
         * {
             margin: 0;
@@ -214,7 +302,7 @@ $csrf = $_SESSION['csrf_token'];
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             text-align: center;
             border: 2px solid #00897B;
-        }
+                    }
         .auth-container h3 {
             color: #00897B;
             margin-bottom: 15px;
@@ -377,7 +465,7 @@ $csrf = $_SESSION['csrf_token'];
     </header>
 
     <div class="container">
-        <h1><span class="admin-icon">🔐</span>会員登録フォーム</h1>
+        <h1><span class="admin-icon"><?php echo $page_icon; ?></span><?php echo $form_title; ?></h1>
 
         <?php if (!empty($errors)): ?>
             <div class="error-messages">
@@ -417,12 +505,6 @@ $csrf = $_SESSION['csrf_token'];
                         <input type="radio" name="gender" value="女性" <?php echo ($form_data['gender'] === '女性') ? 'checked' : ''; ?>>
                         女性
                     </label>
-                    <!--
-                    <label>
-                        <input type="radio" name="gender" value="その他">
-                        その他
-                    </label>
-                    -->
                 </div>
             </div>
 
@@ -430,9 +512,6 @@ $csrf = $_SESSION['csrf_token'];
                 <label>住所（都道府県）</label>
                 <select name="prefecture">
                     <option value="">選択してください</option>
-                    <!--
-                    <option value="不正な県">不正な県（テスト用）</option>
-                    -->
                     <?php foreach ($prefectures as $pref): ?>
                         <option value="<?php echo htmlspecialchars($pref, ENT_QUOTES, 'UTF-8'); ?>" 
                             <?php echo ($form_data['prefecture'] === $pref) ? 'selected' : ''; ?>>
@@ -449,20 +528,17 @@ $csrf = $_SESSION['csrf_token'];
 
             <div class="form-group">
                 <label>メールアドレス（ログインID）</label>
-                <!--
-                <input type="text" name="email" value="<?php echo htmlspecialchars($form_data['email'], ENT_QUOTES, 'UTF-8'); ?>">
-                -->
                 <input type="email" name="email" value="<?php echo htmlspecialchars($form_data['email'], ENT_QUOTES, 'UTF-8'); ?>">
             </div>
 
             <div class="form-group">
-                <label>パスワード</label>
-                <input type="password" name="password" value="<?php echo htmlspecialchars($form_data['password'], ENT_QUOTES, 'UTF-8'); ?>">
+                <label>パスワード<?php echo $password_label_suffix; ?></label>
+                <input type="password" name="password" value="<?php echo htmlspecialchars($form_data['password'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo $password_placeholder; ?>">
             </div>
 
             <div class="form-group">
                 <label>パスワード確認</label>
-                <input type="password" name="password_confirm" value="<?php echo htmlspecialchars($form_data['password_confirm'], ENT_QUOTES, 'UTF-8'); ?>">
+                <input type="password" name="password_confirm" value="<?php echo htmlspecialchars($form_data['password_confirm'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo $password_placeholder; ?>">
             </div>
 
             <div class="button-group">

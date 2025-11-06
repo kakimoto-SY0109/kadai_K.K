@@ -7,7 +7,16 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+$admin_name = $_SESSION['admin_name'] ?? '';
+
+if (!isset($_SESSION['form_data'])) {
+    header('Location: member.php');
+    exit;
+}
+
 $form_data = $_SESSION['form_data'];
+$edit_mode = $_SESSION['edit_mode'] ?? false;
+$password_changed = $_SESSION['password_changed'] ?? false;
 $error_message = '';
 
 // POST時のみCSRFトークンを検証
@@ -15,74 +24,135 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $posted = $_POST['csrf_token'] ?? '';
     if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$posted)) {
         $_SESSION['error_message'] = '不正なリクエストです。もう一度やり直してください。';
-        header('Location: member_regist.php');
+        header('Location: member.php');
         exit;
     }
 
     if (isset($_POST['back'])) {
         $_SESSION['return_from_confirm'] = true;
-        header('Location: member_regist.php');
+        header('Location: member_regist.php' . ($edit_mode ? '?id=' . $form_data['member_id'] : ''));
         exit;
     }
 
+    // 登録/更新ボタン
     if (isset($_POST['submit'])) {
         try {
-            $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
             $gender_value = ($form_data['gender'] === '男性') ? 1 : 2;
             
-            $sql = "INSERT INTO members (
-                        name_sei, 
-                        name_mei, 
-                        gender, 
-                        pref_name, 
-                        address, 
-                        email, 
-                        password, 
-                        created_at,
-                        updated_at
-                    ) VALUES (
-                        :name_sei, 
-                        :name_mei, 
-                        :gender, 
-                        :pref_name, 
-                        :address, 
-                        :email, 
-                        :password, 
-                        NOW(),
-                        NOW()
-                    )";
+            if ($edit_mode) {
+                if ($password_changed) {
+                    // パスワード変更あり
+                    $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+                    
+                    $sql = "UPDATE members SET 
+                                name_sei = :name_sei,
+                                name_mei = :name_mei,
+                                gender = :gender,
+                                pref_name = :pref_name,
+                                address = :address,
+                                email = :email,
+                                password = :password,
+                                updated_at = NOW()
+                            WHERE id = :id AND deleted_at IS NULL";
+                    
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
+                } else {
+                    // パスワード変更なし
+                    $sql = "UPDATE members SET 
+                                name_sei = :name_sei,
+                                name_mei = :name_mei,
+                                gender = :gender,
+                                pref_name = :pref_name,
+                                address = :address,
+                                email = :email,
+                                updated_at = NOW()
+                            WHERE id = :id AND deleted_at IS NULL";
+                    
+                    $stmt = $pdo->prepare($sql);
+                }
+                
+                $stmt->bindValue(':name_sei', $form_data['last_name'], PDO::PARAM_STR);
+                $stmt->bindValue(':name_mei', $form_data['first_name'], PDO::PARAM_STR);
+                $stmt->bindValue(':gender', $gender_value, PDO::PARAM_INT);
+                $stmt->bindValue(':pref_name', $form_data['prefecture'], PDO::PARAM_STR);
+                $stmt->bindValue(':address', $form_data['address'], PDO::PARAM_STR);
+                $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+                $stmt->bindValue(':id', $form_data['member_id'], PDO::PARAM_INT);
+                $stmt->execute();
+                
+                unset($_SESSION['form_data']);
+                unset($_SESSION['edit_mode']);
+                unset($_SESSION['password_changed']);
+                unset($_SESSION['edit_member_id']);
+                $_SESSION['edit_complete'] = true;
+                
+                header('Location: member_complete.php');
+                exit;
+                
+            } else {
+                $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+                
+                $sql = "INSERT INTO members (
+                            name_sei, 
+                            name_mei, 
+                            gender, 
+                            pref_name, 
+                            address, 
+                            email, 
+                            password, 
+                            created_at,
+                            updated_at
+                        ) VALUES (
+                            :name_sei, 
+                            :name_mei, 
+                            :gender, 
+                            :pref_name, 
+                            :address, 
+                            :email, 
+                            :password, 
+                            NOW(),
+                            NOW()
+                        )";
+                
+                $stmt = $pdo->prepare($sql);
+                
+                $stmt->bindValue(':name_sei', $form_data['last_name'], PDO::PARAM_STR);
+                $stmt->bindValue(':name_mei', $form_data['first_name'], PDO::PARAM_STR);
+                $stmt->bindValue(':gender', $gender_value, PDO::PARAM_INT);
+                $stmt->bindValue(':pref_name', $form_data['prefecture'], PDO::PARAM_STR);
+                $stmt->bindValue(':address', $form_data['address'], PDO::PARAM_STR);
+                $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
+                $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
+                $stmt->execute();
+                unset($_SESSION['form_data']);
+                $_SESSION['register_complete'] = true;
+
+                header('Location: member_complete.php');
+                exit;
+            }
             
-            $stmt = $pdo->prepare($sql);
-            
-            $stmt->bindValue(':name_sei', $form_data['last_name'], PDO::PARAM_STR);
-            $stmt->bindValue(':name_mei', $form_data['first_name'], PDO::PARAM_STR);
-            $stmt->bindValue(':gender', $gender_value, PDO::PARAM_INT);
-            $stmt->bindValue(':pref_name', $form_data['prefecture'], PDO::PARAM_STR);
-            $stmt->bindValue(':address', $form_data['address'], PDO::PARAM_STR);
-            $stmt->bindValue(':email', $form_data['email'], PDO::PARAM_STR);
-            $stmt->bindValue(':password', $hashed_password, PDO::PARAM_STR);
-            $stmt->execute();
-        
-            unset($_SESSION['form_data']);
-            
-            header('Location: member_complete.php');
-            exit;
-            
-            } catch (PDOException $e) {
-                error_log('Database error: ' . $e->getMessage());
-                die('データベースエラーが発生しました。');
+        } catch (PDOException $e) {
+            error_log('Database error: ' . $e->getMessage());
+            die('データベースエラーが発生しました。');
         }
     }
 }
 
 $csrf = $_SESSION['csrf_token'];
+
+// 表示用
+$page_title = $edit_mode ? '会員編集確認' : '会員登録確認';
+$page_icon = $edit_mode ? '✏️' : '🔐';
+$confirm_message = $edit_mode ? '以下の内容で更新します。よろしければ「更新する」ボタンを押してください。' : '以下の内容で登録します。よろしければ「登録する」ボタンを押してください。';
+$submit_button_text = $edit_mode ? '更新する' : '登録する';
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>会員登録確認</title>
+    <title><?php echo $page_title; ?></title>
     <style>
         * {
             margin: 0;
@@ -99,10 +169,6 @@ $csrf = $_SESSION['csrf_token'];
             color: white;
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .admin-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
         }
         .header-container {
             max-width: 1200px;
@@ -167,6 +233,15 @@ $csrf = $_SESSION['csrf_token'];
             margin-bottom: 20px;
             border-radius: 4px;
         }
+        .password-change-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            color: #856404;
+            text-align: center;
+        }
         .confirm-section {
             margin-bottom: 20px;
             padding-bottom: 20px;
@@ -216,7 +291,6 @@ $csrf = $_SESSION['csrf_token'];
         .btn-submit:hover {
             background-color: #45a049;
         }
-
         @media (max-width: 480px) {
             .header-container {
                 flex-direction: column;
@@ -235,6 +309,13 @@ $csrf = $_SESSION['csrf_token'];
                 margin: 30px 16px;
                 padding: 20px 16px;
             }
+            .button-group {
+                flex-direction: column;
+            }
+            .btn-back,
+            .btn-submit {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -252,7 +333,7 @@ $csrf = $_SESSION['csrf_token'];
     </header>
 
     <div class="container">
-        <h1><span class="admin-icon">🔐</span>会員登録確認</h1>
+        <h1><span class="admin-icon"><?php echo $page_icon; ?></span><?php echo $page_title; ?></h1>
         
         <?php if (!empty($error_message)): ?>
             <div class="error-message">
@@ -260,7 +341,13 @@ $csrf = $_SESSION['csrf_token'];
             </div>
         <?php endif; ?>
         
-        <p style="margin-bottom: 20px; color: #666;">以下の内容で登録します。よろしければ「登録する」ボタンを押してください。</p>
+        <p style="margin-bottom: 20px; color: #666;"><?php echo $confirm_message; ?></p>
+
+        <?php if ($edit_mode && $password_changed): ?>
+            <div class="password-change-notice">
+                ⚠️ パスワードも同時に変更されます
+            </div>
+        <?php endif; ?>
 
         <div class="confirm-section">
             <div class="confirm-label">ID</div>
@@ -306,7 +393,7 @@ $csrf = $_SESSION['csrf_token'];
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="button-group">
                 <button type="submit" name="back" class="btn-back">戻る</button>
-                <button type="submit" name="submit" class="btn-submit">登録する</button>
+                <button type="submit" name="submit" class="btn-submit"><?php echo $submit_button_text; ?></button>
             </div>
         </form>
     </div>

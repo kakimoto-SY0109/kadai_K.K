@@ -1,12 +1,38 @@
 <?php
 require_once '../config.php';
+
+// 未ログインの場合はログイン画面へ遷移
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+$admin_name = $_SESSION['admin_name'] ?? '';
+
+$edit_mode = isset($_SESSION['edit_complete']) && $_SESSION['edit_complete'] === true;
+
+// URL直接入力
+if (!$edit_mode && !isset($_SESSION['register_complete'])) {
+    header('Location: member.php');
+    exit;
+}
+
+// 表示用
+$page_title = $edit_mode ? '会員編集完了' : '会員登録完了';
+$message = $edit_mode ? '会員編集が完了しました' : '会員登録が完了しました';
+
+if ($edit_mode) {
+    unset($_SESSION['edit_complete']);
+} else {
+    unset($_SESSION['register_complete']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>会員登録完了</title>
+    <title><?php echo htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8'); ?></title>
     <style>
         * {
             margin: 0;
@@ -134,7 +160,7 @@ require_once '../config.php';
 
     <div class="container">
         <div class="success-icon">✓</div>
-        <h1>会員登録が完了しました</h1>
+        <h1><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></h1>
     </div>
 </body>
 </html>

@@ -533,7 +533,7 @@ $current_params = [
                                 <td><?php echo htmlspecialchars(getGenderText($member['gender']), ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo htmlspecialchars($member['pref_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo htmlspecialchars($member['created_at'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><a href="member_edit.php?id=<?php echo urlencode($member['id']); ?>" class="btn-edit">編集</a></td>
+                                <td><a href="member_regist.php?id=<?php echo urlencode($member['id']); ?>" class="btn-edit">編集</a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
