@@ -44,6 +44,19 @@ function getGenderText($gender) {
     return '';
 }
 
+function getFullAddress($member) {
+    $address_parts = [];
+    
+    if (!empty($member['pref_name'])) {
+        $address_parts[] = $member['pref_name'];
+    }
+    if (!empty($member['address'])) {
+        $address_parts[] = $member['address'];
+    }
+    
+    return implode('', $address_parts);
+}
+
 try {
     $where = [];
     $params = [];
@@ -397,6 +410,19 @@ $current_params = [
             border-radius: 4px;
             margin-bottom: 20px;
         }
+        .btn-detail {
+            display: inline-block;
+            background-color: #757575;
+            color: white;
+            padding: 6px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .btn-detail:hover {
+            background-color: #616161;
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -511,7 +537,7 @@ $current_params = [
                             </th>
                             <th>氏名</th>
                             <th>性別</th>
-                            <th>都道府県</th>
+                            <th>住所</th>
                             <th>
                                 登録日時
                                 <button type="button" class="sort-btn" onclick="location.href='<?php 
@@ -523,17 +549,20 @@ $current_params = [
                                 ?>'">▼</button>
                             </th>
                             <th>編集</th>
+                            <th>詳細</th>    
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($members as $member): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($member['id'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars($member['name_sei'], ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($member['name_mei'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><a href="member_detail.php?id=<?php echo urlencode($member['id']); ?>" class="name-link"><?php echo htmlspecialchars($member['name_sei'], ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($member['name_mei'], ENT_QUOTES, 'UTF-8'); ?></a></td>
                                 <td><?php echo htmlspecialchars(getGenderText($member['gender']), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars($member['pref_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><?php echo htmlspecialchars(getFullAddress($member), ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo htmlspecialchars($member['created_at'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><a href="member_regist.php?id=<?php echo urlencode($member['id']); ?>" class="btn-edit">編集</a></td>
+                                <td><a href="member_detail.php?id=<?php echo urlencode($member['id']); ?>" class="btn-detail">詳細</a></td>
+                                </a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
